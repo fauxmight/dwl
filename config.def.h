@@ -90,6 +90,20 @@ LIBINPUT_CONFIG_TAP_MAP_LMR -- 1/2/3 finger tap maps to left/middle/right
 */
 static const enum libinput_config_tap_button_map button_map = LIBINPUT_CONFIG_TAP_MAP_LRM;
 
+/* Tablet area: tablet input will be received within a rectangle
+                bounded by these coordinates
+   Hint: if using only one screen
+   tablet_min_x = 0;
+   tablet_min_y = 0;
+   tablet_max_x = RESOLUTION_MAX_X;
+   tablet_max_y = RESOLUTION_MAX_Y;
+   will set tablet input to that entire screen */
+static const int tablet_min_x = 0;
+static const int tablet_min_y = 0;
+static const int tablet_max_x = 1920;
+static const int tablet_max_y = 1080;
+
+
 /* If you want to use the windows key for MODKEY, use WLR_MODIFIER_LOGO */
 #define MODKEY WLR_MODIFIER_ALT
 

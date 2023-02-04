@@ -43,6 +43,8 @@
 #include <wlr/types/wlr_session_lock_v1.h>
 #include <wlr/types/wlr_single_pixel_buffer_v1.h>
 #include <wlr/types/wlr_subcompositor.h>
+#include <wlr/types/wlr_tablet_pad.h>
+#include <wlr/types/wlr_tablet_tool.h>
 #include <wlr/types/wlr_viewporter.h>
 #include <wlr/types/wlr_virtual_keyboard_v1.h>
 #include <wlr/types/wlr_xcursor_manager.h>
@@ -245,6 +247,8 @@ static void createlocksurface(struct wl_listener *listener, void *data);
 static void createmon(struct wl_listener *listener, void *data);
 static void createnotify(struct wl_listener *listener, void *data);
 static void createpointer(struct wlr_pointer *pointer);
+static void createtablet(struct wlr_tablet *tablet);
+static void createtabletpad(struct wlr_tablet_pad *tabletpad);
 static void cursorframe(struct wl_listener *listener, void *data);
 static void destroydragicon(struct wl_listener *listener, void *data);
 static void destroyidleinhibitor(struct wl_listener *listener, void *data);
@@ -299,6 +303,10 @@ static void setsel(struct wl_listener *listener, void *data);
 static void setup(void);
 static void spawn(const Arg *arg);
 static void startdrag(struct wl_listener *listener, void *data);
+static void tablettooltip(struct wl_listener *listener, void *data);
+static void tablettoolaxis(struct wl_listener *listener, void *data);
+static void tablettoolbutton(struct wl_listener *listener, void *data);
+static void tablettoolproximity(struct wl_listener *listener, void *data);
 static void tag(const Arg *arg);
 static void tagmon(const Arg *arg);
 static void tile(Monitor *m);
@@ -393,6 +401,11 @@ static struct wl_listener request_start_drag = {.notify = requeststartdrag};
 static struct wl_listener start_drag = {.notify = startdrag};
 static struct wl_listener session_lock_create_lock = {.notify = locksession};
 static struct wl_listener session_lock_mgr_destroy = {.notify = destroysessionmgr};
+static struct wl_listener tablet_tool_tip = {.notify = tablettooltip};
+static struct wl_listener tablet_tool_axis = {.notify = tablettoolaxis};
+static struct wl_listener tablet_tool_button = {.notify = tablettoolbutton};
+static struct wl_listener tablet_tool_proximity = {.notify = tablettoolproximity};
+
 
 #ifdef XWAYLAND
 static void activatex11(struct wl_listener *listener, void *data);
@@ -1065,6 +1078,92 @@ createpointer(struct wlr_pointer *pointer)
 }
 
 void
+createtablet(struct wlr_tablet *tablet)
+{
+	if (wlr_input_device_is_libinput(&tablet->base)) {
+		struct libinput_device *libinput_device =  (struct libinput_device*)
+			wlr_libinput_get_device_handle(&tablet->base);
+
+		if (libinput_device_config_tap_get_finger_count(libinput_device)) {
+			libinput_device_config_tap_set_enabled(libinput_device, tap_to_click);
+			libinput_device_config_tap_set_drag_enabled(libinput_device, tap_and_drag);
+			libinput_device_config_tap_set_drag_lock_enabled(libinput_device, drag_lock);
+			libinput_device_config_tap_set_button_map(libinput_device, button_map);
+		}
+
+		if (libinput_device_config_scroll_has_natural_scroll(libinput_device))
+			libinput_device_config_scroll_set_natural_scroll_enabled(libinput_device, natural_scrolling);
+
+		if (libinput_device_config_dwt_is_available(libinput_device))
+			libinput_device_config_dwt_set_enabled(libinput_device, disable_while_typing);
+
+		if (libinput_device_config_left_handed_is_available(libinput_device))
+			libinput_device_config_left_handed_set(libinput_device, left_handed);
+
+		if (libinput_device_config_middle_emulation_is_available(libinput_device))
+			libinput_device_config_middle_emulation_set_enabled(libinput_device, middle_button_emulation);
+
+		if (libinput_device_config_scroll_get_methods(libinput_device) != LIBINPUT_CONFIG_SCROLL_NO_SCROLL)
+			libinput_device_config_scroll_set_method (libinput_device, scroll_method);
+
+		if (libinput_device_config_click_get_methods(libinput_device) != LIBINPUT_CONFIG_CLICK_METHOD_NONE)
+			libinput_device_config_click_set_method (libinput_device, click_method);
+
+		if (libinput_device_config_send_events_get_modes(libinput_device))
+			libinput_device_config_send_events_set_mode(libinput_device, send_events_mode);
+
+		if (libinput_device_config_accel_is_available(libinput_device)) {
+			libinput_device_config_accel_set_profile(libinput_device, accel_profile);
+			libinput_device_config_accel_set_speed(libinput_device, accel_speed);
+		}
+	}
+
+	wlr_cursor_attach_input_device(cursor, &tablet->base);
+}
+
+void
+createtabletpad(struct wlr_tablet_pad *tablet_pad)
+{
+	if (wlr_input_device_is_libinput(&tablet_pad->base)) {
+		struct libinput_device *libinput_device =  (struct libinput_device*)
+			wlr_libinput_get_device_handle(&tablet_pad->base);
+
+		if (libinput_device_config_tap_get_finger_count(libinput_device)) {
+			libinput_device_config_tap_set_enabled(libinput_device, tap_to_click);
+			libinput_device_config_tap_set_drag_enabled(libinput_device, tap_and_drag);
+			libinput_device_config_tap_set_drag_lock_enabled(libinput_device, drag_lock);
+			libinput_device_config_tap_set_button_map(libinput_device, button_map);
+		}
+
+		if (libinput_device_config_scroll_has_natural_scroll(libinput_device))
+			libinput_device_config_scroll_set_natural_scroll_enabled(libinput_device, natural_scrolling);
+
+		if (libinput_device_config_dwt_is_available(libinput_device))
+			libinput_device_config_dwt_set_enabled(libinput_device, disable_while_typing);
+
+		if (libinput_device_config_left_handed_is_available(libinput_device))
+			libinput_device_config_left_handed_set(libinput_device, left_handed);
+
+		if (libinput_device_config_middle_emulation_is_available(libinput_device))
+			libinput_device_config_middle_emulation_set_enabled(libinput_device, middle_button_emulation);
+
+		if (libinput_device_config_scroll_get_methods(libinput_device) != LIBINPUT_CONFIG_SCROLL_NO_SCROLL)
+			libinput_device_config_scroll_set_method (libinput_device, scroll_method);
+
+		if (libinput_device_config_click_get_methods(libinput_device) != LIBINPUT_CONFIG_CLICK_METHOD_NONE)
+			libinput_device_config_click_set_method (libinput_device, click_method);
+
+		if (libinput_device_config_send_events_get_modes(libinput_device))
+			libinput_device_config_send_events_set_mode(libinput_device, send_events_mode);
+
+		if (libinput_device_config_accel_is_available(libinput_device)) {
+			libinput_device_config_accel_set_profile(libinput_device, accel_profile);
+			libinput_device_config_accel_set_speed(libinput_device, accel_speed);
+		}
+	}
+}
+
+void
 cursorframe(struct wl_listener *listener, void *data)
 {
 	/* This event is forwarded by the cursor when a pointer emits an frame
@@ -1378,6 +1477,12 @@ inputdevice(struct wl_listener *listener, void *data)
 		break;
 	case WLR_INPUT_DEVICE_POINTER:
 		createpointer(wlr_pointer_from_input_device(device));
+		break;
+	case WLR_INPUT_DEVICE_TABLET_PAD:
+		createtabletpad(wlr_tablet_pad_from_input_device(device));
+		break;
+	case WLR_INPUT_DEVICE_TABLET_TOOL:
+		createtablet(wlr_tablet_from_input_device(device));
 		break;
 	default:
 		/* TODO handle other input device types */
@@ -2274,6 +2379,10 @@ setup(void)
 	wl_signal_add(&cursor->events.button, &cursor_button);
 	wl_signal_add(&cursor->events.axis, &cursor_axis);
 	wl_signal_add(&cursor->events.frame, &cursor_frame);
+	wl_signal_add(&cursor->events.tablet_tool_tip, &tablet_tool_tip);
+	wl_signal_add(&cursor->events.tablet_tool_axis, &tablet_tool_axis);
+	wl_signal_add(&cursor->events.tablet_tool_button, &tablet_tool_button);
+	wl_signal_add(&cursor->events.tablet_tool_proximity, &tablet_tool_proximity);
 
 	/*
 	 * Configures a seat, which is a single "seat" at which a user sits and
@@ -2336,6 +2445,30 @@ startdrag(struct wl_listener *listener, void *data)
 
 	drag->icon->data = &wlr_scene_subsurface_tree_create(drag_icon, drag->icon->surface)->node;
 	wl_signal_add(&drag->icon->events.destroy, &drag_icon_destroy);
+}
+
+void
+tablettooltip(struct wl_listener *listener, void *data)
+{
+}
+
+void
+tablettoolaxis(struct wl_listener *listener, void *data)
+{
+	struct wlr_tablet_tool_axis_event *event = data;
+	wlr_cursor_warp_absolute(cursor, &event->tablet->base,
+				 event->updated_axes & WLR_TABLET_TOOL_AXIS_X ? event->x : NAN,
+				 event->updated_axes & WLR_TABLET_TOOL_AXIS_Y ? event->y : NAN);
+}
+
+void
+tablettoolbutton(struct wl_listener *listener, void *data)
+{
+}
+
+void
+tablettoolproximity(struct wl_listener *listener, void *data)
+{
 }
 
 void

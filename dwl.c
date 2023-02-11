@@ -2455,6 +2455,7 @@ tablettooltip(struct wl_listener *listener, void *data)
 void
 tablettoolaxis(struct wl_listener *listener, void *data)
 {
+	double mapped_x, mapped_y;
 	struct wlr_tablet_tool_axis_event *event = data;
 	mapped_x =  event->x * (tablet_max_x - tablet_min_x) + tablet_min_x;
 	mapped_y =  event->y * (tablet_max_y - tablet_min_y) + tablet_min_y;

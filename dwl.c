@@ -2456,9 +2456,11 @@ void
 tablettoolaxis(struct wl_listener *listener, void *data)
 {
 	struct wlr_tablet_tool_axis_event *event = data;
+	mapped_x =  event->x * (tablet_max_x - tablet_min_x) + tablet_min_x;
+	mapped_y =  event->y * (tablet_max_y - tablet_min_y) + tablet_min_y;
 	wlr_cursor_warp_absolute(cursor, &event->tablet->base,
-				 event->updated_axes & WLR_TABLET_TOOL_AXIS_X ? event->x : NAN,
-				 event->updated_axes & WLR_TABLET_TOOL_AXIS_Y ? event->y : NAN);
+				 event->updated_axes & WLR_TABLET_TOOL_AXIS_X ? mapped_x : NAN,
+				 event->updated_axes & WLR_TABLET_TOOL_AXIS_Y ? mapped_y : NAN);
 }
 
 void

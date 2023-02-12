@@ -2462,10 +2462,10 @@ tablettoolaxis(struct wl_listener *listener, void *data)
 	struct wlr_box mapping;
 	struct wlr_tablet_tool_axis_event *event = data;
 	wlr_output_layout_get_box(NULL, NULL, &mapping);
-	map_ratio_x = (mapping.width  - (tablet_x_max - tablet_x_min)) / mapping.width;
-	map_ratio_y = (mapping.height - (tablet_y_max - tablet_y_min)) / mapping.height;
-	mapped_x = event->x * map_ratio_x + tablet_x_min;
-	mapped_y = event->y * map_ratio_y + tablet_y_min;
+	map_ratio_x = (mapping.width  - (tablet_max_x - tablet_min_x)) / mapping.width;
+	map_ratio_y = (mapping.height - (tablet_max_y - tablet_min_y)) / mapping.height;
+	mapped_x = event->x * map_ratio_x + tablet_min_x;
+	mapped_y = event->y * map_ratio_y + tablet_min_y;
 	wlr_cursor_warp_absolute(cursor, &event->tablet->base,
 				 event->updated_axes & WLR_TABLET_TOOL_AXIS_X ? mapped_x : NAN,
 				 event->updated_axes & WLR_TABLET_TOOL_AXIS_Y ? mapped_y : NAN);

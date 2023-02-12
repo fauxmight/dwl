@@ -2461,6 +2461,7 @@ tablettoolaxis(struct wl_listener *listener, void *data)
 		mapped_y = 0;
 	struct wlr_box mapping;
 	struct wlr_tablet_tool_axis_event *event = data;
+	assert(cur->state->layout);
 	wlr_output_layout_get_box(cursor->state->layout, NULL, &mapping);
 	map_ratio_x = (mapping.width  - (tablet_x_max - tablet_x_min)) / mapping.width;
 	map_ratio_y = (mapping.height - (tablet_y_max - tablet_y_min)) / mapping.height;
